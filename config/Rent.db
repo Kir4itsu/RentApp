@@ -1,0 +1,44 @@
+CREATE DATABASE rental_aksesoris;
+USE rental_aksesoris;
+
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'user') NOT NULL,
+    nama_lengkap VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    no_telp VARCHAR(15),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Admin = admin, password   -- User = user, password
+INSERT INTO users (username, password, role, nama_lengkap, email, no_telp) VALUES
+('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'Administrator', 'admin@example.com', '08123456789'),
+('user', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'user', 'User Demo', 'user@example.com', '08987654321');
+
+
+CREATE TABLE aksesoris (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nama_aksesoris VARCHAR(100) NOT NULL,
+    kategori ENUM('Mouse', 'Keyboard', 'Headset', 'Monitor', 'Webcam') NOT NULL,
+    harga_sewa INT NOT NULL,
+    stok INT NOT NULL,
+    deskripsi TEXT,
+    gambar VARCHAR(255),
+    status ENUM('Tersedia', 'Disewa') DEFAULT 'Tersedia',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE rental (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    aksesoris_id INT,
+    tanggal_mulai DATE NOT NULL,
+    tanggal_selesai DATE NOT NULL,
+    total_harga INT NOT NULL,
+    status ENUM('Menunggu', 'Disetujui', 'Ditolak', 'Selesai') DEFAULT 'Menunggu',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (aksesoris_id) REFERENCES aksesoris(id)
+);
