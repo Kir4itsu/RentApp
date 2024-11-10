@@ -28,11 +28,13 @@ if (!file_exists(UPLOAD_PATH)) {
 }
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 } catch(PDOException $e) {
-    echo "Koneksi gagal: " . $e->getMessage();
+    // Log error to a file instead of displaying it
+    file_put_contents(PROJECT_ROOT . '/logs/db_errors.log', $e->getMessage(), FILE_APPEND);
+    echo "Koneksi gagal. Silakan coba lagi nanti.";
     die();
 }
 

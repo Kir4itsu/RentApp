@@ -8,26 +8,46 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
 }
 
 // Handle rental status updates
-if (isset($_POST['update_status'])) {
-    $rental_id = $_POST['rental_id'];
-    $new_status = $_POST['new_status'];
-    
-    $stmt = $pdo->prepare("UPDATE rental SET status = ? WHERE id = ?");
-    $stmt->execute([$new_status, $rental_id]);
-    
-    // Update aksesoris status
-    if ($new_status == 'Selesai') {
-        $stmt = $pdo->prepare("
-            UPDATE aksesoris a 
-            JOIN rental r ON a.id = r.aksesoris_id 
-            SET a.status = 'Tersedia' 
-            WHERE r.id = ?
-        ");
-        $stmt->execute([$rental_id]);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
+    try {
+        $rental_id = filter_var($_POST['rental_id'], FILTER_SANITIZE_NUMBER_INT);
+        $new_status = filter_var($_POST['new_status'], FILTER_SANITIZE_STRING);
+        
+        // Begin transaction
+        $pdo->beginTransaction();
+        
+        // Update rental status (removed updated_at field)
+        $stmt = $pdo->prepare("UPDATE rental SET status = ? WHERE id = ?");
+        $success = $stmt->execute([$new_status, $rental_id]);
+        
+        // If status is 'Selesai', update aksesoris status
+        if ($success && $new_status == 'Selesai') {
+            $stmt = $pdo->prepare("
+                UPDATE aksesoris a 
+                JOIN rental r ON a.id = r.aksesoris_id 
+                SET a.status = 'Tersedia' 
+                WHERE r.id = ?
+            ");
+            $stmt->execute([$rental_id]);
+        }
+        
+        // Commit transaction
+        $pdo->commit();
+        
+        // Return JSON response for AJAX
+        if ($success) {
+            echo json_encode(['status' => 'success', 'message' => 'Status berhasil diperbarui']);
+            exit;
+        } else {
+            throw new Exception('Gagal mengupdate status');
+        }
+        
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        $pdo->rollBack();
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
     }
-    
-    header('Location: rental.php');
-    exit();
 }
 
 // Fetch rentals with pagination
@@ -207,29 +227,23 @@ $total_pages = ceil($total_records / $limit);
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <?php if ($rental['status'] == 'Menunggu'): ?>
-                                <form action="rental.php" method="POST" class="inline">
-                                    <input type="hidden" name="rental_id" value="<?php echo $rental['id']; ?>">
-                                    <input type="hidden" name="new_status" value="Disetujui">
-                                    <button type="submit" name="update_status" class="text-green-600 hover:text-green-900 mr-3">
+                                    <button 
+                                        onclick="updateStatus(<?php echo $rental['id']; ?>, 'Disetujui')"
+                                        class="text-green-600 hover:text-green-900 mr-3 approve-btn">
                                         <i class="fas fa-check"></i>
                                     </button>
-                                </form>
-                                <form action="rental.php" method="POST" class="inline">
-                                    <input type="hidden" name="rental_id" value="<?php echo $rental['id']; ?>">
-                                    <input type="hidden" name="new_status" value="Ditolak">
-                                    <button type="submit" name="update_status" class="text-red-600 hover:text-red-900">
+                                    <button 
+                                        onclick="updateStatus(<?php echo $rental['id']; ?>, 'Ditolak')"
+                                        class="text-red-600 hover:text-red-900 reject-btn">
                                         <i class="fas fa-times"></i>
                                     </button>
-                                </form>
                                 <?php endif; ?>
                                 <?php if ($rental['status'] == 'Disetujui'): ?>
-                                <form action="rental.php" method="POST" class="inline">
-                                    <input type="hidden" name="rental_id" value="<?php echo $rental['id']; ?>">
-                                    <input type="hidden" name="new_status" value="Selesai">
-                                    <button type="submit" name="update_status" class="text-blue-600 hover:text-blue-900">
+                                    <button 
+                                        onclick="updateStatus(<?php echo $rental['id']; ?>, 'Selesai')"
+                                        class="text-blue-600 hover:text-blue-900 complete-btn">
                                         <i class="fas fa-check-circle"></i> Complete
                                     </button>
-                                </form>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -274,15 +288,9 @@ $total_pages = ceil($total_records / $limit);
     <!-- Sweet Alert untuk notifikasi -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        // Fungsi untuk konfirmasi sebelum mengubah status
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const status = this.querySelector('input[name="new_status"]').value;
+            function updateStatus(rentalId, newStatus) {
                 let message = '';
-                
-                switch(status) {
+                switch(newStatus) {
                     case 'Disetujui':
                         message = 'Apakah anda yakin ingin menyetujui rental ini?';
                         break;
@@ -305,11 +313,44 @@ $total_pages = ceil($total_records / $limit);
                     cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        this.submit();
+                        // Create form data
+                        const formData = new FormData();
+                        formData.append('rental_id', rentalId);
+                        formData.append('new_status', newStatus);
+                        formData.append('update_status', '1');
+
+                        // Send AJAX request
+                        fetch('rental.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil',
+                                    text: 'Status rental berhasil diperbarui',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    // Reload page to show updated data
+                                    window.location.reload();
+                                });
+                            } else {
+                                throw new Error(data.message || 'Terjadi kesalahan');
+                            }
+                        })
+                        .catch(error => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: error.message
+                            });
+                        });
                     }
                 });
-            });
-        });
+            }
 
         // Tampilkan alert jika ada parameter status di URL
         window.onload = function() {
