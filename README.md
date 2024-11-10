@@ -1,7 +1,7 @@
 Untuk Login
 
-Admin =
+Admin Login
 Username = admin Password = password
 
-User Demo =
+User Demo Login
 Username = user Password = password
