@@ -55,7 +55,7 @@ $aksesoris = $stmt->fetchAll();
                 <?php foreach ($aksesoris as $item): ?>
                     <div class="bg-white rounded-lg shadow-md overflow-hidden">
                         <?php if ($item['gambar']): ?>
-                            <img src="../uploads/<?php echo htmlspecialchars($item['gambar']); ?>" 
+                            <img src="<?php echo getImageUrl($item['gambar']); ?>" 
                                  alt="<?php echo htmlspecialchars($item['nama_aksesoris']); ?>"
                                  class="w-full h-48 object-cover">
                         <?php else: ?>

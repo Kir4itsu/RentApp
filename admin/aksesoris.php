@@ -25,12 +25,18 @@ function uploadImage($file) {
         return null;
     }
     
+    // Create uploads directory if it doesn't exist
+    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
+    if (!file_exists($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+    }
+    
     // Generate unique filename
     $newname = uniqid() . '_' . time() . '.' . $ext;
-    $destination = '../uploads/' . $newname; // Pastikan path ini sesuai
-
+    $destination = $upload_dir . $newname;
+    
     if (move_uploaded_file($file['tmp_name'], $destination)) {
-        return 'uploads/' . $newname; // Return relative path for database
+        return '/uploads/' . $newname; // Return path that starts with /
     }
     
     return null;
