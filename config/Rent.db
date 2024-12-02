@@ -41,3 +41,8 @@ CREATE TABLE rental (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (aksesoris_id) REFERENCES aksesoris(id)
 );
+
+/*untuk nambah token di user*/
+ALTER TABLE users 
+ADD COLUMN reset_token VARCHAR(64) NULL, 
+ADD COLUMN reset_token_expiry DATETIME NULL;
