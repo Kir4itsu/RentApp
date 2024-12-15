@@ -5,9 +5,31 @@ require_once '../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\SMTP;
 
+// Initialize error and success message variables
 $error = '';
 $success = '';
+
+// Ensure logs directory exists with proper permissions
+$log_dir = PROJECT_ROOT . '/logs/';
+if (!is_dir($log_dir)) {
+    mkdir($log_dir, 0755, true);
+}
+
+// Pastikan file log dapat ditulis
+$log_files = [
+    $log_dir . 'email_errors.log',
+    $log_dir . 'email_send_failure.log',
+    $log_dir . 'email_debug.log'
+];
+
+foreach ($log_files as $file) {
+    if (!file_exists($file)) {
+        touch($file);
+        chmod($file, 0666);
+    }
+}
 
 // Function to generate a secure reset token
 function generateResetToken() {
@@ -18,27 +40,50 @@ function generateResetToken() {
 function sendResetEmail($email, $reset_link) {
     global $pdo;
     
-    // Fetch user details to personalize email
-    $stmt = $pdo->prepare("SELECT nama_lengkap FROM users WHERE email = ?");
-    $stmt->execute([$email]);
-    $user = $stmt->fetch();
-    
-    $mail = new PHPMailer(true);
     try {
-        // Server settings (using localhost SMTP for development)
+        $stmt = $pdo->prepare("SELECT nama_lengkap FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+        
+        $mail = new PHPMailer(true);
+        
+        // Extensive logging
+        error_log("Starting email send process for: " . $email);
+        
+        // SMTP Configuration
         $mail->isSMTP();
-        $mail->Host       = 'localhost';
-        $mail->SMTPAuth   = false;
-        $mail->Port       = 1025; // Recommended to use Mailhog or Mailtrap for testing
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'kira@gmail.com'; // Ganti dengan email Anda
+        $mail->Password   = 'ibtg aoxz pjdms ksar'; // Ganti dengan App Password
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
+        
+        // Debugging
+        $mail->SMTPDebug = SMTP::DEBUG_SERVER;
+        $mail->Debugoutput = function($str, $level) {
+            error_log("SMTP Debug ($level): $str");
+        };
+        
+        // Increase timeout
+        $mail->Timeout = 60; // 60 seconds
+        
+        // Relaxed SSL checking
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            ]
+        ];
 
-        // Recipients
+        // Email details
         $mail->setFrom('noreply@rentalaccessories.com', 'Rental Aksesoris');
         $mail->addAddress($email, $user['nama_lengkap'] ?? 'Pengguna');
 
-        // Content
         $mail->isHTML(true);
         $mail->Subject = 'Reset Password Akun Rental Aksesoris';
-        $mail->Body    = "
+        $mail->Body = "
             <h2>Halo " . htmlspecialchars($user['nama_lengkap'] ?? 'Pengguna') . ",</h2>
             <p>Anda menerima email ini karena ada permintaan reset password untuk akun Anda.</p>
             <p>Klik link berikut untuk mereset password Anda:</p>
@@ -47,47 +92,81 @@ function sendResetEmail($email, $reset_link) {
             <p>Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini.</p>
         ";
 
-        $mail->send();
-        return true;
+        // Attempt to send
+        if($mail->send()) {
+            error_log("Email sent successfully to: " . $email);
+            return true;
+        }
+        
+        // If sending fails
+        error_log("Email sending failed. Error: " . $mail->ErrorInfo);
+        return false;
     } catch (Exception $e) {
-        // Log the error
-        error_log("Email send error: " . $mail->ErrorInfo);
+        // Comprehensive error logging
+        $error_log_path = PROJECT_ROOT . '/logs/email_errors.log';
+        $error_message = date('[Y-m-d H:i:s] ') . 
+            "Full Email Error for {$email}: " . $e->getMessage() . 
+            "\nTrace: " . $e->getTraceAsString() . PHP_EOL;
+        
+        file_put_contents($error_log_path, $error_message, FILE_APPEND);
+        error_log($error_message);
+        
         return false;
     }
 }
 
 // Step 1: Request Reset
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_reset'])) {
+    // Validate email
     $email = filter_var($_POST['email'], FILTER_VALIDATE_EMAIL);
 
     if (!$email) {
         $error = "Format email tidak valid!";
     } else {
-        // Check if email exists
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
+        try {
+            // Check if email exists
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
 
-        if ($user) {
-            // Generate reset token
-            $reset_token = generateResetToken();
-            $token_expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
+            if ($user) {
+                // Generate reset token
+                $reset_token = generateResetToken();
+                $token_expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
-            // Store token in database
-            $stmt = $pdo->prepare("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?");
-            $stmt->execute([$reset_token, $token_expiry, $email]);
+                // Store token in database
+                $stmt = $pdo->prepare("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?");
+                $stmt->execute([$reset_token, $token_expiry, $email]);
 
-            // Create reset link
-            $reset_link = BASE_URL . '/auth/reset-password.php?token=' . $reset_token;
+                // Create reset link
+                $reset_link = BASE_URL . '/auth/reset-password.php?token=' . $reset_token;
 
-            // Send reset email
-            if (sendResetEmail($email, $reset_link)) {
-                $success = "Email reset password telah dikirim. Silakan periksa email Anda.";
+                // Send reset email
+                if (sendResetEmail($email, $reset_link)) {
+                    $success = "Email reset password telah dikirim. Silakan periksa email Anda.";
+                } else {
+                    // Log additional failure information
+                    $failure_log_path = PROJECT_ROOT . '/logs/email_send_failure.log';
+                    $failure_message = date('[Y-m-d H:i:s] ') . 
+                        "Email send failed for: {$email}\n";
+                    
+                    file_put_contents($failure_log_path, $failure_message, FILE_APPEND);
+                    
+                    $error = "Gagal mengirim email. Silakan hubungi administrator dan periksa log.";
+                }
             } else {
-                $error = "Gagal mengirim email. Silakan hubungi administrator.";
+                $error = "Email tidak terdaftar dalam sistem!";
             }
-        } else {
-            $error = "Email tidak terdaftar dalam sistem!";
+        } catch (PDOException $e) {
+            // Database error logging
+            $db_error_log_path = PROJECT_ROOT . '/logs/db_errors.log';
+            $db_error_message = date('[Y-m-d H:i:s] ') . 
+                "Database error: " . $e->getMessage() . PHP_EOL;
+            
+            file_put_contents($db_error_log_path, $db_error_message, FILE_APPEND);
+            error_log($db_error_message);
+            
+            $error = "Terjadi kesalahan sistem. Silakan coba lagi nanti.";
         }
     }
 }
