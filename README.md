@@ -10,6 +10,15 @@ Password = password
 
 udah ada perlindungan dasar terhadap SQL injection melalui penggunaan PDO (PHP Data Objects) dengan prepared statements.
 
+coba cek juga di cmd/terminal 
+ping smtp.gmail.com
+telnet smtp.gmail.com 465
+telnet smtp.gmail.com 587
+
+kalo telnet eror coba nyalain di windows Control Panel > Programs > Programs and Features terus pilih Turn Windows features on or off
+terus nyalain Telnet Client
+
+nah kalo masih eror telnet coba nyalain vpn dan matiin firewall di Windows Security Private Network dan Public Network off semua
 
 ubah juga file sendmail.ini di "C:\xampp\sendmail"
 
