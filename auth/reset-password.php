@@ -8,14 +8,35 @@ $success = '';
 // Validate reset token
 if (isset($_GET['token'])) {
     $reset_token = $_GET['token'];
-
-    // Check if token is valid and not expired
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE reset_token = ? AND reset_token_expiry > NOW()");
-    $stmt->execute([$reset_token]);
-    $user = $stmt->fetch();
-
-    if (!$user) {
-        $error = "Token reset password tidak valid atau sudah kedaluwarsa.";
+    
+    // Debug log token yang diterima
+    error_log("Received token: " . $reset_token);
+    
+    try {
+        // Check if token is valid and not expired
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE reset_token = ? AND reset_token_expiry > NOW()");
+        $stmt->execute([$reset_token]);
+        $user = $stmt->fetch();
+        
+        // Debug log hasil query
+        error_log("User found: " . ($user ? "Yes" : "No"));
+        
+        if (!$user) {
+            // Query untuk debug tanpa current_time
+            $stmt = $pdo->prepare("SELECT reset_token, reset_token_expiry FROM users WHERE reset_token = ?");
+            $stmt->execute([$reset_token]);
+            $tokenInfo = $stmt->fetch();
+            
+            if ($tokenInfo) {
+                error_log("Token expiry time: " . $tokenInfo['reset_token_expiry']);
+                error_log("Current server time: " . date('Y-m-d H:i:s'));
+            }
+            
+            $error = "Token reset password tidak valid atau sudah kedaluwarsa.";
+        }
+    } catch (PDOException $e) {
+        error_log("Database Error: " . $e->getMessage());
+        $error = "Terjadi kesalahan sistem. Silakan coba lagi nanti.";
     }
 }
 
@@ -25,27 +46,65 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reset_password'])) {
     $confirm_password = $_POST['confirm_password'];
     $token = $_POST['token'];
 
-    if ($new_password !== $confirm_password) {
+    if (empty($new_password) || empty($confirm_password)) {
+        $error = "Semua field harus diisi!";
+    } elseif ($new_password !== $confirm_password) {
         $error = "Konfirmasi password tidak cocok!";
+    } elseif (strlen($new_password) < 6) {
+        $error = "Password harus minimal 6 karakter!";
     } else {
-        // Verify token again
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE reset_token = ? AND reset_token_expiry > NOW()");
-        $stmt->execute([$token]);
-        $user = $stmt->fetch();
+        try {
+            // Verify token again
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE reset_token = ? AND reset_token_expiry > NOW()");
+            $stmt->execute([$token]);
+            $user = $stmt->fetch();
 
-        if ($user) {
-            // Hash new password
-            $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+            if ($user) {
+                // Hash new password
+                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
 
-            // Update password and clear reset token
-            $stmt = $pdo->prepare("UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?");
-            $stmt->execute([$hashed_password, $user['id']]);
+                // Update password and clear reset token
+                $stmt = $pdo->prepare("UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?");
+                $stmt->execute([$hashed_password, $user['id']]);
 
-            $success = "Password berhasil diubah. Silakan login.";
-        } else {
-            $error = "Token reset password tidak valid.";
+                $success = "Password berhasil diubah. Silakan login.";
+                error_log("Password reset successful for user ID: " . $user['id']);
+                
+                // Redirect to login page after 3 seconds
+                header("refresh:3;url=login.php");
+            } else {
+                $error = "Token reset password tidak valid atau sudah kedaluwarsa.";
+            }
+        } catch (PDOException $e) {
+            error_log("Password reset error: " . $e->getMessage());
+            $error = "Terjadi kesalahan saat mengubah password. Silakan coba lagi.";
         }
     }
+}
+
+// Debug mode
+if (isset($_GET['debug']) && $_GET['debug'] === 'true') {
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+    
+    echo "<pre>";
+    echo "Token received: " . htmlspecialchars($_GET['token']) . "\n";
+    
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE reset_token = ?");
+        $stmt->execute([$_GET['token']]);
+        $debug_user = $stmt->fetch();
+        
+        echo "User found: " . ($debug_user ? "Yes" : "No") . "\n";
+        if ($debug_user) {
+            echo "Token expiry: " . $debug_user['reset_token_expiry'] . "\n";
+            echo "Current time: " . date('Y-m-d H:i:s') . "\n";
+        }
+    } catch (PDOException $e) {
+        echo "Debug query error: " . $e->getMessage() . "\n";
+    }
+    echo "</pre>";
 }
 ?>
 
@@ -74,20 +133,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reset_password'])) {
                 </div>
             <?php endif; ?>
 
-            <?php if ($user): ?>
+            <?php if (isset($user) && $user): ?>
                 <form method="POST" action="">
                     <input type="hidden" name="token" value="<?php echo htmlspecialchars($reset_token); ?>">
                     
                     <div class="mb-4">
                         <label class="block text-gray-700 text-sm font-bold mb-2">Password Baru</label>
                         <input type="password" name="new_password" required
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            minlength="6">
                     </div>
 
                     <div class="mb-6">
                         <label class="block text-gray-700 text-sm font-bold mb-2">Konfirmasi Password Baru</label>
                         <input type="password" name="confirm_password" required
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            minlength="6">
                     </div>
 
                     <button type="submit" name="reset_password"
