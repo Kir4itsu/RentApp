@@ -1,5 +1,4 @@
 <?php
-// database.php
 
 // Database configuration
 $host = 'localhost';
@@ -10,10 +9,11 @@ $password = '';
 // Define project root path
 define('PROJECT_ROOT', dirname(__DIR__));  // Akan mengarah ke folder root project
 
-// Define base URL
+// Define base URL dengan path project
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
 $host = $_SERVER['HTTP_HOST'];
-define('BASE_URL', $protocol . $host);
+$baseDir = dirname($_SERVER['PHP_SELF'], 2); // Naik 2 level untuk mendapatkan root project
+define('BASE_URL', $protocol . $host . $baseDir);  // Ini akan menghasilkan http://localhost/nama_folder_project
 
 // Define upload paths
 define('UPLOAD_PATH', PROJECT_ROOT . '/uploads/');  // Physical path di server
@@ -46,5 +46,19 @@ function validateUploadPath($path) {
 // Helper function untuk get URL gambar lengkap
 function getImageUrl($filename) {
     if (!$filename) return null;
-    return UPLOAD_URL . basename($filename);
+    // Remove any leading slash
+    $filename = ltrim($filename, '/');
+    return UPLOAD_URL . $filename;
+}
+// Helper function untuk generate reset link
+function getResetLink($token) {
+    $reset_url = BASE_URL . '/auth/reset-password.php?token=' . urlencode($token);
+    error_log("Generated reset URL: " . $reset_url);
+    return $reset_url;
+}
+
+// Fungsi update status ketika user cancel item
+function updateAksesorisStatus($pdo, $aksesoris_id, $status) {
+    $stmt = $pdo->prepare("UPDATE aksesoris SET status = ? WHERE id = ?");
+    $stmt->execute([$status, $aksesoris_id]);
 }

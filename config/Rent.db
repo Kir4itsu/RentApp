@@ -46,3 +46,7 @@ CREATE TABLE rental (
 ALTER TABLE users 
 ADD COLUMN reset_token VARCHAR(64) NULL, 
 ADD COLUMN reset_token_expiry DATETIME NULL;
+
+ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL;
+ALTER TABLE users MODIFY COLUMN reset_token VARCHAR(128);
+ALTER TABLE rental MODIFY COLUMN status ENUM('Menunggu', 'Disetujui', 'Ditolak', 'Selesai', 'Dibatalkan') DEFAULT 'Menunggu';
