@@ -2,10 +2,15 @@
 session_start();
 require_once '../config/database.php';
 
-// Cek apakah user sudah login dan memiliki role user
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'user') {
     header('Location: ../auth/login.php');
     exit();
+}
+
+// Buat folder profiles jika belum ada
+$upload_path = PROJECT_ROOT . '/uploads/profiles/';
+if (!file_exists($upload_path)) {
+    mkdir($upload_path, 0777, true);
 }
 
 // Mengambil data user
@@ -16,7 +21,6 @@ $user = $stmt->fetch();
 // Handle form submission untuk update profile
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nama_lengkap = $_POST['nama_lengkap'];
-    $email = $_POST['email'];
     $no_telp = $_POST['no_telp'];
     $current_password = $_POST['current_password'];
     $new_password = $_POST['new_password'];
@@ -25,18 +29,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $errors = [];
     $success = [];
 
+    // Handle profile picture upload
+    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == 0) {
+        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+        $filename = $_FILES['profile_picture']['name'];
+        $filetype = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        if (in_array($filetype, $allowed)) {
+            // Nama file baru dengan format: profile_userid_timestamp.extension
+            $new_filename = 'profile_' . $_SESSION['user_id'] . '_' . time() . '.' . $filetype;
+            
+            if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_path . $new_filename)) {
+                // Delete old profile picture if exists
+                if ($user['profile_picture'] && file_exists($upload_path . $user['profile_picture'])) {
+                    unlink($upload_path . $user['profile_picture']);
+                }
+                
+                // Update database with new profile picture
+                $stmt = $pdo->prepare("UPDATE users SET profile_picture = ? WHERE id = ?");
+                $stmt->execute([$new_filename, $_SESSION['user_id']]);
+                $success[] = "Foto profil berhasil diperbarui!";
+            } else {
+                $errors[] = "Gagal mengupload foto profil.";
+            }
+        } else {
+            $errors[] = "Format file tidak didukung. Gunakan format: jpg, jpeg, png, atau gif.";
+        }
+    }
+
     // Update informasi dasar
-    if (!empty($nama_lengkap) && !empty($email) && !empty($no_telp)) {
+    if (!empty($nama_lengkap) && !empty($no_telp)) {
         try {
-            $stmt = $pdo->prepare("UPDATE users SET nama_lengkap = ?, email = ?, no_telp = ? WHERE id = ?");
-            $stmt->execute([$nama_lengkap, $email, $no_telp, $_SESSION['user_id']]);
+            $stmt = $pdo->prepare("UPDATE users SET nama_lengkap = ?, no_telp = ? WHERE id = ?");
+            $stmt->execute([$nama_lengkap, $no_telp, $_SESSION['user_id']]);
             $success[] = "Informasi profil berhasil diperbarui!";
         } catch (PDOException $e) {
-            if ($e->getCode() == '23000') {
-                $errors[] = "Email tersebut sudah digunakan!";
-            } else {
-                $errors[] = "Terjadi kesalahan saat memperbarui profil.";
-            }
+            $errors[] = "Terjadi kesalahan saat memperbarui profil.";
         }
     }
 
@@ -132,6 +160,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <?php endforeach; ?>
                     <?php endif; ?>
 
+                    <!-- Profile Picture Section -->
+                    <div class="mb-8 text-center">
+                        <div class="mb-4">
+                            <?php if ($user['profile_picture'] && file_exists($upload_path . $user['profile_picture'])): ?>
+                                <img src="<?php echo BASE_URL . '/uploads/profiles/' . $user['profile_picture']; ?>" 
+                                     alt="Profile Picture" 
+                                     class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-gray-200">
+                            <?php else: ?>
+                                <div class="w-32 h-32 rounded-full mx-auto bg-gray-200 flex items-center justify-center">
+                                    <i class="fas fa-user text-4xl text-gray-400"></i>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <form action="" method="POST" enctype="multipart/form-data" class="space-y-4">
+                            <div class="flex items-center justify-center">
+                                <label for="profile_picture" class="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                    <i class="fas fa-camera mr-2"></i> Upload Foto
+                                </label>
+                                <input type="file" id="profile_picture" name="profile_picture" class="hidden" 
+                                       accept=".jpg,.jpeg,.png,.gif" onchange="form.submit()">
+                            </div>
+                        </form>
+                    </div>
+
                     <!-- Profile Form -->
                     <form method="POST" class="space-y-6">
                         <!-- Basic Information -->
@@ -139,29 +191,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <h2 class="text-lg font-medium text-gray-900 mb-4">Informasi Dasar</h2>
                             <div class="grid grid-cols-1 gap-6">
                                 <div>
-                                    <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
-                                    <input type="text" name="username" id="username" value="<?php echo htmlspecialchars($user['username']); ?>" 
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    <label class="block text-sm font-medium text-gray-700">Username</label>
+                                    <input type="text" value="<?php echo htmlspecialchars($user['username']); ?>" 
+                                           class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 cursor-not-allowed"
                                            disabled>
+                                    <p class="mt-1 text-sm text-gray-500">Username tidak dapat diubah</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                                    <input type="email" value="<?php echo htmlspecialchars($user['email']); ?>" 
+                                           class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 cursor-not-allowed"
+                                           disabled>
+                                    <p class="mt-1 text-sm text-gray-500">Email tidak dapat diubah</p>
                                 </div>
 
                                 <div>
                                     <label for="nama_lengkap" class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
-                                    <input type="text" name="nama_lengkap" id="nama_lengkap" value="<?php echo htmlspecialchars($user['nama_lengkap']); ?>" 
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                           required>
-                                </div>
-
-                                <div>
-                                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                                    <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($user['email']); ?>" 
+                                    <input type="text" name="nama_lengkap" id="nama_lengkap" 
+                                           value="<?php echo htmlspecialchars($user['nama_lengkap']); ?>" 
                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                            required>
                                 </div>
 
                                 <div>
                                     <label for="no_telp" class="block text-sm font-medium text-gray-700">Nomor Telepon</label>
-                                    <input type="tel" name="no_telp" id="no_telp" value="<?php echo htmlspecialchars($user['no_telp']); ?>" 
+                                    <input type="tel" name="no_telp" id="no_telp" 
+                                           value="<?php echo htmlspecialchars($user['no_telp']); ?>" 
                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                            required>
                                 </div>
