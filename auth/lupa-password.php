@@ -121,31 +121,47 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_reset'])) {
                 $reset_token = generateResetToken();
                 $token_expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
                 
-                // Debug log sebelum update
-                error_log("Attempting to update token for email: " . $email);
-                error_log("Token: " . $reset_token);
-                error_log("Expiry: " . $token_expiry);
+                // Debug logs
+                error_log("=== RESET PASSWORD REQUEST ===");
+                error_log("Email: " . $email);
+                error_log("Generated token: " . $reset_token);
+                error_log("Token expiry: " . $token_expiry);
+
+                // Update database in one statement
+                $stmt = $pdo->prepare("
+                    UPDATE users 
+                    SET reset_token = :token,
+                        reset_token_expiry = :expiry 
+                    WHERE email = :email
+                ");
                 
-                $stmt = $pdo->prepare("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?");
-                $result = $stmt->execute([$reset_token, $token_expiry, $email]);
+                $params = [
+                    ':token' => $reset_token,
+                    ':expiry' => $token_expiry,
+                    ':email' => $email
+                ];
                 
-                // Debug log hasil update
-                error_log("Update result: " . ($result ? "Success" : "Failed"));
-                
-                if ($result && sendResetEmail($email, $reset_token)) {
-                    // Debug log token yang dikirim
-                    error_log("Email sent with token: " . $reset_token);
-                    $success = "Email reset password telah dikirim. Silakan periksa email Anda.";
+                if ($stmt->execute($params)) {
+                    // Verify the update
+                    $verify = $pdo->prepare("SELECT reset_token FROM users WHERE email = ?");
+                    $verify->execute([$email]);
+                    $result = $verify->fetch();
+                    error_log("Stored token: " . $result['reset_token']);
+                    
+                    if (sendResetEmail($email, $reset_token)) {
+                        $success = "Email reset password telah dikirim. Silakan periksa email Anda.";
+                        error_log("Reset email sent successfully");
+                    } else {
+                        throw new Exception("Gagal mengirim email");
+                    }
                 } else {
-                    $error = "Gagal mengirim email. Silakan coba lagi nanti.";
-                    error_log("Failed to send email or update token");
+                    throw new Exception("Gagal mengupdate token");
                 }
             } else {
                 $error = "Email tidak terdaftar dalam sistem!";
-                error_log("Email not found: " . $email);
             }
-        } catch (PDOException $e) {
-            error_log("Database Error: " . $e->getMessage());
+        } catch (Exception $e) {
+            error_log("Reset Password Error: " . $e->getMessage());
             $error = "Terjadi kesalahan sistem. Silakan coba lagi nanti.";
         }
     }

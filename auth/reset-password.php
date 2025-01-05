@@ -5,34 +5,43 @@ require_once '../config/database.php';
 $error = '';
 $success = '';
 
+
+error_log("=== RESET PASSWORD VERIFICATION ===");
+
 // Validate reset token
 if (isset($_GET['token'])) {
-    $reset_token = $_GET['token'];
-    
-    // Debug log token yang diterima
+    $reset_token = trim($_GET['token']);
     error_log("Received token: " . $reset_token);
     
     try {
-        // Check if token is valid and not expired
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE reset_token = ? AND reset_token_expiry > NOW()");
+        // First, just check if the token exists
+        $stmt = $pdo->prepare("
+            SELECT id, email, reset_token, reset_token_expiry 
+            FROM users 
+            WHERE reset_token = ?
+        ");
         $stmt->execute([$reset_token]);
         $user = $stmt->fetch();
         
-        // Debug log hasil query
-        error_log("User found: " . ($user ? "Yes" : "No"));
-        
-        if (!$user) {
-            // Query untuk debug tanpa current_time
-            $stmt = $pdo->prepare("SELECT reset_token, reset_token_expiry FROM users WHERE reset_token = ?");
-            $stmt->execute([$reset_token]);
-            $tokenInfo = $stmt->fetch();
+        if ($user) {
+            error_log("Token found for email: " . $user['email']);
+            error_log("Token expiry: " . $user['reset_token_expiry']);
+            error_log("Current time: " . date('Y-m-d H:i:s'));
             
-            if ($tokenInfo) {
-                error_log("Token expiry time: " . $tokenInfo['reset_token_expiry']);
-                error_log("Current server time: " . date('Y-m-d H:i:s'));
+            // Check if token is expired
+            if (strtotime($user['reset_token_expiry']) < time()) {
+                $error = "Token reset password sudah kedaluwarsa.";
+                error_log("Token expired");
             }
+        } else {
+            $error = "Token reset password tidak valid.";
+            error_log("Token not found in database");
             
-            $error = "Token reset password tidak valid atau sudah kedaluwarsa.";
+            // Debug: Check all active tokens
+            $debug = $pdo->query("SELECT email, reset_token FROM users WHERE reset_token IS NOT NULL");
+            while ($row = $debug->fetch()) {
+                error_log("Active token in DB - Email: " . $row['email'] . ", Token: " . $row['reset_token']);
+            }
         }
     } catch (PDOException $e) {
         error_log("Database Error: " . $e->getMessage());
