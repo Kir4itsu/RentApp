@@ -1,0 +1,82 @@
+[2024-12-15 15:09:45] Email send error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2024-12-15 15:10:24] Email send error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2024-12-15 15:13:08] Email send error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2024-12-15 15:26:24] Email send error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2024-12-15 15:36:42] Email send error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2024-12-15 15:37:24] Email send error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2024-12-15 15:42:46] Full Email Error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Debug Output: 2024-12-15 14:42:46 SMTP ERROR: Failed to connect to server: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond (10060)<br>
+SMTP Error: Could not connect to SMTP host. Failed to connect to server<br>
+
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 15 D...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(79): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(144): sendResetEmail('kir.acount@gmai...', 'http://localhos...')
+#5 {main}
+[2024-12-15 15:43:11] Full Email Error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Debug Output: 2024-12-15 14:43:11 SMTP ERROR: Failed to connect to server: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond (10060)<br>
+SMTP Error: Could not connect to SMTP host. Failed to connect to server<br>
+
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 15 D...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(79): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(144): sendResetEmail('kir.acount@gmai...', 'http://localhos...')
+#5 {main}
+[2024-12-15 15:48:15] Full Email Error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 15 D...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(86): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(135): sendResetEmail('kir.acount@gmai...', 'http://localhos...')
+#5 {main}
+[2024-12-15 15:54:44] Full Email Error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 15 D...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(96): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(145): sendResetEmail('kir.acount@gmai...', 'http://localhos...')
+#5 {main}
+[2024-12-22 06:53:04] Full Email Error for robertbazk@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 22 D...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(96): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(145): sendResetEmail('robertbazk@gmai...', 'http://localhos...')
+#5 {main}
+[2024-12-22 07:00:41] Full Email Error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 22 D...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(96): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(145): sendResetEmail('kir.acount@gmai...', 'http://localhos...')
+#5 {main}
+[2024-12-22 07:43:39] Full Email Error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 22 D...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(96): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(145): sendResetEmail('kir.acount@gmai...', 'http://localhos...')
+#5 {main}
+[2024-12-22 07:45:40] Full Email Error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 22 D...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(96): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(145): sendResetEmail('kir.acount@gmai...', 'http://localhos...')
+#5 {main}
+[2025-01-05 05:26:01] Full Email Error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 5 Ja...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(88): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(135): sendResetEmail('kir.acount@gmai...', '5f2105865f4d1db...')
+#5 {main}
+[2025-01-05 07:19:33] Full Email Error for kir.acount@gmail.com: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+Trace: #0 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(2058): PHPMailer\PHPMailer\PHPMailer->smtpConnect(Array)
+#1 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1687): PHPMailer\PHPMailer\PHPMailer->smtpSend('Date: Sun, 5 Ja...', '\r\n            <...')
+#2 C:\xampp\htdocs\CRUD-Rental\vendor\phpmailer\phpmailer\src\PHPMailer.php(1521): PHPMailer\PHPMailer\PHPMailer->postSend()
+#3 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(88): PHPMailer\PHPMailer\PHPMailer->send()
+#4 C:\xampp\htdocs\CRUD-Rental\auth\lupa-password.php(151): sendResetEmail('kir.acount@gmai...', '127fb9349277c35...')
+#5 {main}
