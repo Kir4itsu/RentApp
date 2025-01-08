@@ -1,16 +1,53 @@
 <?php
 session_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 require_once '../config/database.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'user') {
-    header('Location: ../auth/login.php');
-    exit();
+   header('Location: ../auth/login.php');
+   exit();
+}
+
+// Helper functions
+function normalizePath($path) {
+   return str_replace('\\', '/', $path);
+}
+
+function getProfilePictureUrl($filename) {
+   if (!$filename) return false;
+   $upload_url = rtrim(BASE_URL, '/') . '/uploads/profiles/';
+   return $upload_url . '/' . ltrim($filename, '/');
+}
+
+function upload_error_message($code) {
+   switch ($code) {
+       case UPLOAD_ERR_INI_SIZE:
+           return "The uploaded file exceeds the upload_max_filesize directive in php.ini";
+       case UPLOAD_ERR_FORM_SIZE:
+           return "The uploaded file exceeds the MAX_FILE_SIZE directive in the HTML form";
+       case UPLOAD_ERR_PARTIAL:
+           return "The uploaded file was only partially uploaded";
+       case UPLOAD_ERR_NO_FILE:
+           return "No file was uploaded";
+       case UPLOAD_ERR_NO_TMP_DIR:
+           return "Missing a temporary folder";
+       case UPLOAD_ERR_CANT_WRITE:
+           return "Failed to write file to disk";
+       case UPLOAD_ERR_EXTENSION:
+           return "File upload stopped by extension";
+       default:
+           return "Unknown upload error";
+   }
 }
 
 // Buat folder profiles jika belum ada
-$upload_path = PROJECT_ROOT . '/uploads/profiles/';
+$upload_path = normalizePath(PROJECT_ROOT . '/uploads/profiles/');
 if (!file_exists($upload_path)) {
-    mkdir($upload_path, 0777, true);
+   if (!mkdir($upload_path, 0777, true)) {
+       die('Failed to create upload directory');
+   }
+   chmod($upload_path, 0777);
 }
 
 // Mengambil data user
@@ -20,79 +57,112 @@ $user = $stmt->fetch();
 
 // Handle form submission untuk update profile
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nama_lengkap = $_POST['nama_lengkap'];
-    $no_telp = $_POST['no_telp'];
-    $current_password = $_POST['current_password'];
-    $new_password = $_POST['new_password'];
-    $confirm_password = $_POST['confirm_password'];
-    
-    $errors = [];
-    $success = [];
+   $nama_lengkap = isset($_POST['nama_lengkap']) ? $_POST['nama_lengkap'] : '';
+   $no_telp = isset($_POST['no_telp']) ? $_POST['no_telp'] : '';
+   $current_password = isset($_POST['current_password']) ? $_POST['current_password'] : '';
+   $new_password = isset($_POST['new_password']) ? $_POST['new_password'] : '';
+   $confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
+   
+   $errors = [];
+   $success = [];
 
-    // Handle profile picture upload
-    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] == 0) {
-        $allowed = ['jpg', 'jpeg', 'png', 'gif'];
-        $filename = $_FILES['profile_picture']['name'];
-        $filetype = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        
-        if (in_array($filetype, $allowed)) {
-            // Nama file baru dengan format: profile_userid_timestamp.extension
-            $new_filename = 'profile_' . $_SESSION['user_id'] . '_' . time() . '.' . $filetype;
-            
-            if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $upload_path . $new_filename)) {
-                // Delete old profile picture if exists
-                if ($user['profile_picture'] && file_exists($upload_path . $user['profile_picture'])) {
-                    unlink($upload_path . $user['profile_picture']);
-                }
-                
-                // Update database with new profile picture
-                $stmt = $pdo->prepare("UPDATE users SET profile_picture = ? WHERE id = ?");
-                $stmt->execute([$new_filename, $_SESSION['user_id']]);
-                $success[] = "Foto profil berhasil diperbarui!";
-            } else {
-                $errors[] = "Gagal mengupload foto profil.";
-            }
-        } else {
-            $errors[] = "Format file tidak didukung. Gunakan format: jpg, jpeg, png, atau gif.";
-        }
-    }
+   // Handle profile picture upload
+   if (isset($_FILES['profile_picture'])) {
+       $upload_error = $_FILES['profile_picture']['error'];
+       if ($upload_error !== UPLOAD_ERR_NO_FILE) {
+           if ($upload_error !== 0) {
+               $errors[] = "Upload error: " . upload_error_message($upload_error);
+           } else {
+               $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+               $filename = $_FILES['profile_picture']['name'];
+               $filetype = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+               
+               if (in_array($filetype, $allowed)) {
+                   $new_filename = 'profile_' . $_SESSION['user_id'] . '_' . time() . '.' . $filetype;
+                   $target_path = normalizePath($upload_path . $new_filename);
+                   
+                   if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_path)) {
+                       error_log("File berhasil diupload ke: " . $target_path);
+                       
+                       // Delete old profile picture if exists
+                       if ($user['profile_picture']) {
+                           $old_file = normalizePath($upload_path . $user['profile_picture']);
+                           if (file_exists($old_file)) {
+                               unlink($old_file);
+                           }
+                       }
+                       
+                       // Update database dengan profile picture baru
+                       $stmt = $pdo->prepare("UPDATE users SET profile_picture = ? WHERE id = ?");
+                       if ($stmt->execute([$new_filename, $_SESSION['user_id']])) {
+                           $success[] = "Foto profil berhasil diperbarui!";
+                           error_log("File URL: " . getProfilePictureUrl($new_filename));
+                           
+                           // Refresh user data
+                           $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+                           $stmt->execute([$_SESSION['user_id']]);
+                           $user = $stmt->fetch();
+                       } else {
+                           $errors[] = "Gagal memperbarui database.";
+                       }
+                   } else {
+                       $errors[] = "Gagal mengupload file. Error code: " . $_FILES['profile_picture']['error'];
+                       error_log("Failed to move uploaded file to: " . $target_path);
+                   }
+               } else {
+                   $errors[] = "Format file tidak didukung. Gunakan format: jpg, jpeg, png, atau gif.";
+               }
+           }
+       }
+   }
 
-    // Update informasi dasar
-    if (!empty($nama_lengkap) && !empty($no_telp)) {
-        try {
-            $stmt = $pdo->prepare("UPDATE users SET nama_lengkap = ?, no_telp = ? WHERE id = ?");
-            $stmt->execute([$nama_lengkap, $no_telp, $_SESSION['user_id']]);
-            $success[] = "Informasi profil berhasil diperbarui!";
-        } catch (PDOException $e) {
-            $errors[] = "Terjadi kesalahan saat memperbarui profil.";
-        }
-    }
+   // Update informasi dasar
+   if (!empty($nama_lengkap) && !empty($no_telp)) {
+       try {
+           $stmt = $pdo->prepare("UPDATE users SET nama_lengkap = ?, no_telp = ? WHERE id = ?");
+           $stmt->execute([$nama_lengkap, $no_telp, $_SESSION['user_id']]);
+           $success[] = "Informasi profil berhasil diperbarui!";
+           
+           // Refresh user data
+           $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+           $stmt->execute([$_SESSION['user_id']]);
+           $user = $stmt->fetch();
+       } catch (PDOException $e) {
+           $errors[] = "Terjadi kesalahan saat memperbarui profil.";
+           error_log($e->getMessage());
+       }
+   }
 
-    // Update password jika diisi
-    if (!empty($current_password) && !empty($new_password)) {
-        // Verifikasi password lama
-        $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
-        $stmt->execute([$_SESSION['user_id']]);
-        $user_data = $stmt->fetch();
+   // Update password jika diisi
+   if (!empty($current_password) && !empty($new_password)) {
+       // Verifikasi password lama
+       $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
+       $stmt->execute([$_SESSION['user_id']]);
+       $user_data = $stmt->fetch();
 
-        if (password_verify($current_password, $user_data['password'])) {
-            if ($new_password === $confirm_password) {
-                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
-                $stmt->execute([$hashed_password, $_SESSION['user_id']]);
-                $success[] = "Password berhasil diperbarui!";
-            } else {
-                $errors[] = "Password baru dan konfirmasi password tidak cocok!";
-            }
-        } else {
-            $errors[] = "Password saat ini tidak sesuai!";
-        }
-    }
+       if (password_verify($current_password, $user_data['password'])) {
+           if ($new_password === $confirm_password) {
+               $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+               try {
+                   $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+                   $stmt->execute([$hashed_password, $_SESSION['user_id']]);
+                   $success[] = "Password berhasil diperbarui!";
+               } catch (PDOException $e) {
+                   $errors[] = "Terjadi kesalahan saat memperbarui password.";
+                   error_log($e->getMessage());
+               }
+           } else {
+               $errors[] = "Password baru dan konfirmasi password tidak cocok!";
+           }
+       } else {
+           $errors[] = "Password saat ini tidak sesuai!";
+       }
+   }
 
-    // Refresh user data setelah update
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    $user = $stmt->fetch();
+   // Final refresh of user data
+   $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+   $stmt->execute([$_SESSION['user_id']]);
+   $user = $stmt->fetch();
 }
 ?>
 
@@ -163,10 +233,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <!-- Profile Picture Section -->
                     <div class="mb-8 text-center">
                         <div class="mb-4">
-                            <?php if ($user['profile_picture'] && file_exists($upload_path . $user['profile_picture'])): ?>
-                                <img src="<?php echo BASE_URL . '/uploads/profiles/' . $user['profile_picture']; ?>" 
-                                     alt="Profile Picture" 
-                                     class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-gray-200">
+                        <?php 
+                            $profile_picture_url = $user['profile_picture'] ? getProfilePictureUrl($user['profile_picture']) : false;
+                            $profile_path = normalizePath(PROJECT_ROOT . '/uploads/profiles/' . $user['profile_picture']);
+
+                            if ($profile_picture_url && file_exists($profile_path)): 
+                            ?>
+                                <img src="<?php echo htmlspecialchars($profile_picture_url); ?>" 
+                                    alt="Profile Picture" 
+                                    class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-gray-200">
                             <?php else: ?>
                                 <div class="w-32 h-32 rounded-full mx-auto bg-gray-200 flex items-center justify-center">
                                     <i class="fas fa-user text-4xl text-gray-400"></i>
@@ -179,9 +254,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     <i class="fas fa-camera mr-2"></i> Upload Foto
                                 </label>
                                 <input type="file" id="profile_picture" name="profile_picture" class="hidden" 
-                                       accept=".jpg,.jpeg,.png,.gif" onchange="form.submit()">
+                                    accept=".jpg,.jpeg,.png,.gif" onchange="this.form.submit()">
                             </div>
                         </form>
+                        <!-- Tambahkan debug info yang terlihat -->
+                        <?php if ($user['profile_picture']): ?>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Profile Form -->

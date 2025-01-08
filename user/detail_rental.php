@@ -14,6 +14,27 @@ if (!isset($_GET['id'])) {
     exit();
 }
 
+function getAksesorisImageUrl($imagePath) {
+    if (empty($imagePath)) {
+        return BASE_URL . '/assets/img/placeholder.jpg';
+    }
+    
+    // Jika path sudah lengkap (mengandung http atau https)
+    if (strpos($imagePath, 'http') === 0) {
+        return $imagePath;
+    }
+    
+    // Hapus slash di awal jika ada
+    $imagePath = ltrim($imagePath, '/');
+    
+    // Jika belum ada folder aksesoris di path, tambahkan
+    if (strpos($imagePath, 'aksesoris/') === false) {
+        $imagePath = 'aksesoris/' . $imagePath;
+    }
+    
+    return BASE_URL . '/uploads/' . $imagePath;
+}
+
 $rental_id = $_GET['id'];
 
 // Mengambil detail rental
@@ -65,6 +86,9 @@ $durasi = ($tanggal_selesai - $tanggal_mulai) / (60 * 60 * 24); // Menghitung da
                         <a href="katalog.php" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             Katalog
                         </a>
+                        <a href="profile.php" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Profile
+                        </a>
                     </div>
                 </div>
                 <div class="flex items-center">
@@ -90,9 +114,10 @@ $durasi = ($tanggal_selesai - $tanggal_mulai) / (60 * 60 * 24); // Menghitung da
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Informasi Aksesoris -->
                     <div>
-                        <img src="<?php echo getImageUrl($rental['gambar']); ?>" 
+                        <img src="<?php echo getAksesorisImageUrl($rental['gambar']); ?>" 
                              alt="<?php echo htmlspecialchars($rental['nama_aksesoris']); ?>"
-                             class="w-full h- 64 object-cover rounded-lg mb-4">
+                             class="w-full h-64 object-cover rounded-lg mb-4"
+                             onerror="this.src='<?php echo BASE_URL; ?>/assets/img/placeholder.jpg'">
                         <h3 class="text-lg font-semibold mb-2"><?php echo htmlspecialchars($rental['nama_aksesoris']); ?></h3>
                         <p class="text-gray-600">Harga Sewa: Rp <?php echo number_format($rental['harga_sewa'], 0, ',', '.'); ?>/hari</p>
                     </div>
@@ -118,6 +143,9 @@ $durasi = ($tanggal_selesai - $tanggal_mulai) / (60 * 60 * 24); // Menghitung da
                                                 break;
                                             case 'Selesai':
                                                 echo 'bg-blue-100 text-blue-800';
+                                                break;
+                                            case 'Dibatalkan':
+                                                echo 'bg-gray-100 text-gray-800';
                                                 break;
                                         }
                                         ?>">

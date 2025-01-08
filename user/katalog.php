@@ -22,7 +22,7 @@ $aksesoris = $stmt->fetchAll();
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100">
-    <!-- Navbar (sama seperti dashboard.php) -->
+    <!-- Navbar -->
     <nav class="bg-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between h-16">
@@ -79,15 +79,16 @@ $aksesoris = $stmt->fetchAll();
                 <?php foreach ($aksesoris as $item): ?>
                     <div class="bg-white rounded-lg shadow-md overflow-hidden">
                         <?php if ($item['gambar']): ?>
-                            <img src="<?php echo getImageUrl($item['gambar']); ?>" 
+                            <img src="<?php echo BASE_URL . '/' . $item['gambar']; ?>" 
                                  alt="<?php echo htmlspecialchars($item['nama_aksesoris']); ?>"
-                                 class="w-full h-48 object-cover">
+                                 class="w-full h-48 object-cover"
+                                 onerror="this.src='<?php echo BASE_URL; ?>/assets/img/placeholder.jpg'">
                         <?php else: ?>
                             <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
                                 <i class="fas fa-desktop text-4xl text-gray-400"></i>
                             </div>
                         <?php endif; ?>
-                        
+
                         <div class="p-4">
                             <h3 class="text-lg font-semibold text-gray-900">
                                 <?php echo htmlspecialchars($item['nama_aksesoris']); ?>
@@ -126,7 +127,7 @@ $aksesoris = $stmt->fetchAll();
             aksesorisList.forEach(item => {
                 const itemKategori = item.querySelector('p').textContent.toLowerCase();
                 const itemNama = item.querySelector('h3').textContent.toLowerCase();
-                
+
                 const matchKategori = kategori === '' || itemKategori.includes(kategori);
                 const matchSearch = itemNama.includes(searchTerm);
 
