@@ -8,6 +8,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
 }
 
 // Handle rental status updates
+// Handle rental status updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     try {
         $rental_id = filter_var($_POST['rental_id'], FILTER_SANITIZE_NUMBER_INT);
@@ -16,19 +17,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
         // Begin transaction
         $pdo->beginTransaction();
         
-        // Update rental status (removed updated_at field)
+        // Get the aksesoris_id for this rental
+        $stmt = $pdo->prepare("SELECT aksesoris_id FROM rental WHERE id = ?");
+        $stmt->execute([$rental_id]);
+        $aksesoris_id = $stmt->fetchColumn();
+        
+        // Update rental status
         $stmt = $pdo->prepare("UPDATE rental SET status = ? WHERE id = ?");
         $success = $stmt->execute([$new_status, $rental_id]);
         
-        // If status is 'Selesai', update aksesoris status
-        if ($success && $new_status == 'Selesai') {
-            $stmt = $pdo->prepare("
-                UPDATE aksesoris a 
-                JOIN rental r ON a.id = r.aksesoris_id 
-                SET a.status = 'Tersedia' 
-                WHERE r.id = ?
-            ");
-            $stmt->execute([$rental_id]);
+        // Update aksesoris status based on rental status
+        if ($success) {
+            $aksesoris_status = '';
+            switch ($new_status) {
+                case 'Disetujui':
+                    $aksesoris_status = 'Disewa';
+                    break;
+                case 'Ditolak':
+                case 'Selesai':
+                case 'Dibatalkan':
+                    $aksesoris_status = 'Tersedia';
+                    break;
+            }
+            
+            if ($aksesoris_status) {
+                $stmt = $pdo->prepare("UPDATE aksesoris SET status = ? WHERE id = ?");
+                $stmt->execute([$aksesoris_status, $aksesoris_id]);
+            }
         }
         
         // Commit transaction
@@ -36,7 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
         
         // Return JSON response for AJAX
         if ($success) {
-            echo json_encode(['status' => 'success', 'message' => 'Status berhasil diperbarui']);
+            echo json_encode([
+                'status' => 'success', 
+                'message' => 'Status berhasil diperbarui',
+                'new_status' => $new_status
+            ]);
             exit;
         } else {
             throw new Exception('Gagal mengupdate status');
@@ -168,13 +187,14 @@ $total_pages = ceil($total_records / $limit);
                         <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" 
                                placeholder="Search rentals..." 
                                class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <select name="status" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">All Status</option>
-                            <option value="Menunggu" <?php echo $status_filter == 'Menunggu' ? 'selected' : ''; ?>>Menunggu</option>
-                            <option value="Disetujui" <?php echo $status_filter == 'Disetujui' ? 'selected' : ''; ?>>Disetujui</option>
-                            <option value="Ditolak" <?php echo $status_filter == 'Ditolak' ? 'selected' : ''; ?>>Ditolak</option>
-                            <option value="Selesai" <?php echo $status_filter == 'Selesai' ? 'selected' : ''; ?>>Selesai</option>
-                        </select>
+                               <select name="status" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Status</option>
+                                    <option value="Menunggu" <?php echo $status_filter == 'Menunggu' ? 'selected' : ''; ?>>Menunggu</option>
+                                    <option value="Disetujui" <?php echo $status_filter == 'Disetujui' ? 'selected' : ''; ?>>Disetujui</option>
+                                    <option value="Ditolak" <?php echo $status_filter == 'Ditolak' ? 'selected' : ''; ?>>Ditolak</option>
+                                    <option value="Selesai" <?php echo $status_filter == 'Selesai' ? 'selected' : ''; ?>>Selesai</option>
+                                    <option value="Dibatalkan" <?php echo $status_filter == 'Dibatalkan' ? 'selected' : ''; ?>>Dibatalkan</option>
+                                </select>
                         <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
                             <i class="fas fa-search mr-2"></i>Filter
                         </button>

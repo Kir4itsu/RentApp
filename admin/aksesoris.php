@@ -25,18 +25,18 @@ function uploadImage($file) {
         return null;
     }
     
-    // Create uploads directory if it doesn't exist
-    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/';
+    // Buat direktori uploads jika belum ada
+    $upload_dir = PROJECT_ROOT . '/uploads/';
     if (!file_exists($upload_dir)) {
         mkdir($upload_dir, 0777, true);
     }
     
     // Generate unique filename
-    $newname = uniqid() . '_' . time() . '.' . $ext;
+    $newname = 'product_' . uniqid() . '_' . time() . '.' . $ext;
     $destination = $upload_dir . $newname;
     
     if (move_uploaded_file($file['tmp_name'], $destination)) {
-        return '/uploads/' . $newname; // Return path that starts with /
+        return 'uploads/' . $newname; // Return relative path untuk database
     }
     
     return null;
@@ -70,8 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $stmt = $pdo->prepare("SELECT gambar FROM aksesoris WHERE id = ?");
                     $stmt->execute([$_POST['id']]);
                     $old_image = $stmt->fetchColumn();
-                    if ($old_image && file_exists($_SERVER['DOCUMENT_ROOT'] . '/' . $old_image)) {
-                        unlink($_SERVER['DOCUMENT_ROOT'] . '/' . $old_image);
+                    
+                    if ($old_image && file_exists(PROJECT_ROOT . '/' . $old_image)) {
+                        unlink(PROJECT_ROOT . '/' . $old_image);
                     }
                     
                     $gambar_path = uploadImage($_FILES['gambar']);
@@ -106,8 +107,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $stmt = $pdo->prepare("SELECT gambar FROM aksesoris WHERE id = ?");
                 $stmt->execute([$_POST['id']]);
                 $image = $stmt->fetchColumn();
-                if ($image && file_exists($_SERVER['DOCUMENT_ROOT'] . '/' . $image)) {
-                    unlink($_SERVER['DOCUMENT_ROOT'] . '/' . $image);
+                
+                if ($image && file_exists(PROJECT_ROOT . '/' . $image)) {
+                    unlink(PROJECT_ROOT . '/' . $image);
                 }
                 
                 $stmt = $pdo->prepare("DELETE FROM aksesoris WHERE id = ?");

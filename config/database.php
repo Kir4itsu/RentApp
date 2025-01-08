@@ -9,11 +9,17 @@ $password = '';
 // Define project root path
 define('PROJECT_ROOT', dirname(__DIR__));  // Akan mengarah ke folder root project
 
-// Define base URL dengan path project
+// Perbaiki definisi BASE_URL di database.php
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
 $host = $_SERVER['HTTP_HOST'];
-$baseDir = dirname($_SERVER['PHP_SELF'], 2); // Naik 2 level untuk mendapatkan root project
-define('BASE_URL', $protocol . $host . $baseDir);  // Ini akan menghasilkan http://localhost/nama_folder_project
+
+// Deteksi subfolder jika ada
+$current_path = dirname($_SERVER['SCRIPT_NAME']);
+$base_path = str_replace('/auth', '', $current_path); // Remove /auth if present
+$base_path = str_replace('/user', '', $base_path); // Remove /user if present
+$base_path = str_replace('/admin', '', $base_path); // Remove /admin if present
+
+define('BASE_URL', $protocol . $host . $base_path);
 
 // Define upload paths
 define('UPLOAD_PATH', PROJECT_ROOT . '/uploads/');  // Physical path di server
